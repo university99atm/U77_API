@@ -1,0 +1,6 @@
+@panchsaalaftsapi_HostAddress = http://localhost:5159
+
+GET {{panchsaalaftsapi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
