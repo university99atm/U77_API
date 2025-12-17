@@ -61,7 +61,11 @@ builder.Services.AddSwaggerGen(options =>
         Title = "Master APIs",
         Version = "v1"
     });
-
+    options.SwaggerDoc("Student", new OpenApiInfo
+    {
+        Title = "Student APIs",
+        Version = "v1"
+    });
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         In = ParameterLocation.Header,
@@ -92,6 +96,13 @@ builder.Services.AddSwaggerGen(options =>
 
         return apiDesc.GroupName == null;
     });
+    //options.DocInclusionPredicate((docName, apiDesc) =>
+    //{
+    //    if (docName == "Student")
+    //        return apiDesc.GroupName == "Student";
+
+    //    return apiDesc.GroupName == null;
+    //});
 });
 
 var app = builder.Build();
@@ -101,6 +112,7 @@ app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/Default/swagger.json", "ATM Global API");
     c.SwaggerEndpoint("/swagger/Master/swagger.json", "Master APIs");
+    c.SwaggerEndpoint("/swagger/Student/swagger.json", "Student APIs");
 });
 
 app.UseHttpsRedirection();
