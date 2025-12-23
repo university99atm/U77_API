@@ -9,9 +9,9 @@
         public bool? IsSchool { get; set; }
         public int? RelatedStudentId { get; set; }
 
-        public string FullName { get; set; }
-        public string ContactNo { get; set; }
-        public string EmailId { get; set; }
+        public string? FullName { get; set; }
+        public string? ContactNo { get; set; }
+        public string? EmailId { get; set; }
 
         public int? RelationId { get; set; }
         public int? CourseId { get; set; }

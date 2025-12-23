@@ -8,8 +8,8 @@
         public int? StudentId { get; set; }
         public int? AddressTypeId { get; set; }
 
-        public string AddressLine1 { get; set; }
-        public string AddressLine2 { get; set; }
+        public string? AddressLine1 { get; set; }
+        public string? AddressLine2 { get; set; }
 
         public int? AreaId { get; set; }
         public int? CityId { get; set; }

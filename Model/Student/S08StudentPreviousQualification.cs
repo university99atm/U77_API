@@ -12,8 +12,8 @@
         public int? EducationBoardId { get; set; }
         public int? MediumOfInstructionId { get; set; }
 
-        public string TCNumber { get; set; }
-        public string RollNumber { get; set; }
+        public string? TCNumber { get; set; }
+        public string? RollNumber { get; set; }
 
         public int? PassingYearId { get; set; }
         public decimal? TotalMarks { get; set; }
@@ -21,6 +21,6 @@
         public decimal? PercentageOrCGPA { get; set; }
 
         public int? SectorId { get; set; }
-        public string ReasonForChange { get; set; }
+        public string? ReasonForChange { get; set; }
     }
 }
