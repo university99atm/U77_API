@@ -17,7 +17,7 @@
         public int? StateId { get; set; }
         public int? CountryId { get; set; }
 
-        public string Pincode { get; set; }
+        public string? Pincode { get; set; }
         public bool? IsPrimary { get; set; }
     }
 }
