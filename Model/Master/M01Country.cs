@@ -9,7 +9,13 @@
         public string? Country_Code { get; set; }
         public bool? is_active { get; set; }
 
-        // operation type (1–5)
+        // 🔹 NEW
+        public bool? System { get; set; }        // 0 = User, 1 = System
+        public string? IPAddress { get; set; }
+
+        // operation type (1–6)
         public int Type { get; set; }
+
+        public int? operation_by { get; set; }
     }
 }

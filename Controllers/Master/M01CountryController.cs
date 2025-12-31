@@ -1,9 +1,12 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using atmglobalapi.Model.Master;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
+using System;
 using System.Data;
+using System.Linq;
 using System.Security.Claims;
-using atmglobalapi.Model.Master;
 
 namespace atmglobalapi.Controllers.Master
 {
@@ -26,11 +29,11 @@ namespace atmglobalapi.Controllers.Master
         {
             try
             {
-                // 🔐 Extract claims from JWT
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                string roleId = User.FindFirst(ClaimTypes.Role)?.Value;
+                /* ================= JWT CLAIMS ================= */
+                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0";
+                string roleId = User.FindFirst(ClaimTypes.Role)?.Value ?? "0";
 
-                // 🔒 Internal authorization
+                /* ================= ROLE CHECK ================= */
                 if ((model.Type == 3 || model.Type == 4) && roleId != "1")
                 {
                     return Unauthorized(new
@@ -40,12 +43,19 @@ namespace atmglobalapi.Controllers.Master
                     });
                 }
 
+                /* ================= CLIENT IP ================= */
+                string ipAddress =
+                    HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault()
+                    ?? HttpContext.Connection.RemoteIpAddress?.MapToIPv4().ToString()
+                    ?? "UNKNOWN";
+
+
                 DataTable dt = new DataTable();
 
-                using (SqlConnection con = new SqlConnection(
-                    _configuration.GetConnectionString("U77_Common")))
-                using (SqlCommand cmd = new SqlCommand(
-                    "[dbo].[U77_Pro_M01_countryoperation]", con))
+                using (SqlConnection con =
+                    new SqlConnection(_configuration.GetConnectionString("U77_Common")))
+                using (SqlCommand cmd =
+                    new SqlCommand("[dbo].[U77_Pro_M01_countryoperation]", con))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
 
@@ -57,11 +67,17 @@ namespace atmglobalapi.Controllers.Master
                     cmd.Parameters.AddWithValue("@Country_Code", (object?)model.Country_Code ?? DBNull.Value);
                     cmd.Parameters.AddWithValue("@is_active", (object?)model.is_active ?? DBNull.Value);
 
+                    // 🔹 NEW FIELDS
+                    cmd.Parameters.AddWithValue("@System", (object?)model.System ?? 0);
+                    cmd.Parameters.AddWithValue("@IPAddress", ipAddress);
+
+                    cmd.Parameters.AddWithValue("@operation_by", Convert.ToInt32(userId));
+
                     SqlDataAdapter da = new SqlDataAdapter(cmd);
                     da.Fill(dt);
                 }
 
-                // ✅ Safely return SP JSON output
+                /* ================= RESPONSE ================= */
                 if (dt.Rows.Count > 0)
                 {
                     var row = dt.Rows[0];
@@ -73,7 +89,7 @@ namespace atmglobalapi.Controllers.Master
                         data = row["data"] == DBNull.Value
                             ? null
                             : System.Text.Json.JsonSerializer.Deserialize<object>(
-                                row["data"].ToString())
+                                row["data"].ToString()!)
                     });
                 }
 
@@ -81,7 +97,7 @@ namespace atmglobalapi.Controllers.Master
                 {
                     isSuccess = false,
                     message = "No response from database",
-                    data = ""
+                    data = "null"
                 });
             }
             catch (Exception ex)
