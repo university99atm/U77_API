@@ -3,10 +3,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
-using System;
 using System.Data;
 using System.Linq;
 using System.Security.Claims;
+using System.Collections.Generic;
 
 namespace atmglobalapi.Controllers.Master
 {
@@ -30,11 +30,14 @@ namespace atmglobalapi.Controllers.Master
             try
             {
                 /* ================= JWT CLAIMS ================= */
-                string userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0";
-                string roleId = User.FindFirst(ClaimTypes.Role)?.Value ?? "0";
+                int userId = Convert.ToInt32(
+                    User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+                string roleId =
+                    User.FindFirst(ClaimTypes.Role)?.Value ?? "0";
 
                 /* ================= ROLE CHECK ================= */
-                if ((model.Type == 3 || model.Type == 4) && roleId != "1")
+                if ((model.Type == 3 || model.Type == 8) && roleId != "1")
                 {
                     return Unauthorized(new
                     {
@@ -49,29 +52,31 @@ namespace atmglobalapi.Controllers.Master
                     ?? HttpContext.Connection.RemoteIpAddress?.MapToIPv4().ToString()
                     ?? "UNKNOWN";
 
-
                 DataTable dt = new DataTable();
 
                 using (SqlConnection con =
                     new SqlConnection(_configuration.GetConnectionString("U77_Common")))
                 using (SqlCommand cmd =
-                    new SqlCommand("[dbo].[U77_Pro_M01_countryoperation]", con))
+                    new SqlCommand("dbo.U77_Pro_M01_countryoperation", con))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
 
                     cmd.Parameters.AddWithValue("@Type", model.Type);
                     cmd.Parameters.AddWithValue("@Id", (object?)model.Id ?? DBNull.Value);
                     cmd.Parameters.AddWithValue("@CountryName", (object?)model.CountryName ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@status", (object?)model.status ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@archive", (object?)model.archive ?? DBNull.Value);
                     cmd.Parameters.AddWithValue("@Country_Code", (object?)model.Country_Code ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@is_active", (object?)model.is_active ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Status", (object?)model.Status ?? DBNull.Value);
 
-                    // 🔹 NEW FIELDS
-                    cmd.Parameters.AddWithValue("@System", (object?)model.System ?? 0);
-                    cmd.Parameters.AddWithValue("@IPAddress", ipAddress);
+                    // Pagination
+                    cmd.Parameters.AddWithValue("@PageNumber", model.PageNumber ?? 1);
+                    cmd.Parameters.AddWithValue("@PageSize", model.PageSize ?? 10);
+                    cmd.Parameters.AddWithValue("@Search", (object?)model.Search ?? DBNull.Value);
 
-                    cmd.Parameters.AddWithValue("@operation_by", Convert.ToInt32(userId));
+                    // Audit
+                    cmd.Parameters.AddWithValue("@System", model.System ?? false);
+                    cmd.Parameters.AddWithValue("@IPAddress", (object?)ipAddress ?? DBNull.Value);
+                    // Match stored procedure parameter name: @operation_by
+                    cmd.Parameters.AddWithValue("@operation_by", userId);
 
                     SqlDataAdapter da = new SqlDataAdapter(cmd);
                     da.Fill(dt);
@@ -80,24 +85,27 @@ namespace atmglobalapi.Controllers.Master
                 /* ================= RESPONSE ================= */
                 if (dt.Rows.Count > 0)
                 {
-                    var row = dt.Rows[0];
+                    // Convert DataTable to a JSON-serializable structure (List<Dictionary<string, object>>)
+                    var rows = dt.Rows.Cast<DataRow>()
+                        .Select(r => dt.Columns.Cast<DataColumn>()
+                            .ToDictionary(
+                                c => c.ColumnName,
+                                c => r[c] == DBNull.Value ? null : r[c]
+                            )
+                        )
+                        .ToList();
 
                     return Ok(new
                     {
-                        isSuccess = Convert.ToBoolean(row["isSuccess"]),
-                        message = row["message"]?.ToString(),
-                        data = row["data"] == DBNull.Value
-                            ? null
-                            : System.Text.Json.JsonSerializer.Deserialize<object>(
-                                row["data"].ToString()!)
+                        isSuccess = true,
+                        data = rows
                     });
                 }
 
                 return Ok(new
                 {
                     isSuccess = false,
-                    message = "No response from database",
-                    data = "null"
+                    message = "No data returned"
                 });
             }
             catch (Exception ex)
@@ -108,7 +116,7 @@ namespace atmglobalapi.Controllers.Master
                     message = "Internal server error",
                     error = ex.Message
                 });
-            }
+            }       
         }
     }
 }

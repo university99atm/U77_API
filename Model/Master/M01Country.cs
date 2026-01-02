@@ -4,18 +4,23 @@
     {
         public int? Id { get; set; }
         public string? CountryName { get; set; }
-        public bool? status { get; set; }
-        public bool? archive { get; set; }
         public string? Country_Code { get; set; }
-        public bool? is_active { get; set; }
 
-        // 🔹 NEW
-        public bool? System { get; set; }        // 0 = User, 1 = System
+        // 🔹 Status
+        // 1 = Active, 0 = Inactive, 2 = Deleted
+        public int? Status { get; set; }
+
+        // 🔹 Pagination & Search (Type 7)
+        public int? PageNumber { get; set; }
+        public int? PageSize { get; set; }
+        public string? Search { get; set; }
+
+        // 🔹 Audit
+        public bool? System { get; set; }
         public string? IPAddress { get; set; }
 
-        // operation type (1–6)
+        // 🔹 Operation
         public int Type { get; set; }
-
-        public int? operation_by { get; set; }
+        public int? OperationBy { get; set; }
     }
 }
