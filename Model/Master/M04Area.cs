@@ -2,14 +2,24 @@
 {
     public class M04Area
     {
-        public int Type { get; set; }        // 1=Insert,2=Update,3=Delete,4=Archive,5=Get
         public int? Id { get; set; }
         public int? DistrictId { get; set; }
+        public int? CityId { get; set; }
         public string? AreaName { get; set; }
         public string? Pincode { get; set; }
-        public int? CityId { get; set; }
-        public bool? Status { get; set; }
-        public bool? Archive { get; set; }
-        public bool? is_active { get; set; }
+
+        // 1 = Active, 0 = Inactive, 2 = Deleted
+        public int? Status { get; set; }
+
+        // Pagination & Search
+        public int? PageNumber { get; set; }
+        public int? PageSize { get; set; }
+        public string? Search { get; set; }
+
+        // Audit
+        public bool? System { get; set; }
+        public string? IPAddress { get; set; }
+
+        public int Type { get; set; }
     }
 }
