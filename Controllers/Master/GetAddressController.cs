@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using System.Data;
+using atmglobalapi.Model.Master;
 
 namespace atmglobalapi.Controllers.Master
 {
@@ -66,10 +67,11 @@ namespace atmglobalapi.Controllers.Master
                         Id = row.Field<int>("DistrictId"),
                         Name = (string?)row.Field<string>("DistrictName")
                     },
-                    City = new
+                    City = new M05City()
                     {
                         Id = row.Field<int?>("CityId"),
-                        Name = (string?)row.Field<string>("CityName")
+                        CityName = (string?)row.Field<string>("CityName"),
+                        CityCode = (string?)row.Field<string>("CityCode")
                     },
                     Area = new
                     {

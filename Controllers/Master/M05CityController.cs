@@ -28,7 +28,10 @@ namespace atmglobalapi.Controllers.Master
         {
             try
             {
-                int userId = Convert.ToInt32(
+                /* ================= JWT CLAIMS ================= */
+                /* ================= JWT CLAIMS ================= */
+                /* ================= JWT CLAIMS ================= */
+                    int userId = Convert.ToInt32(
                     User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
                 string roleId =

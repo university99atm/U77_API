@@ -7,7 +7,7 @@
         public string? StateName { get; set; }
         public string? StateCode { get; set; }
 
-        // 1=Active,0=Inactive,2=Deleted
+        // 1=Active, 0=Inactive, 2=Archived
         public int? Status { get; set; }
 
         // Pagination
@@ -17,7 +17,6 @@
 
         // Audit
         public bool? System { get; set; }
-        public string? IPAddress { get; set; }
 
         public int Type { get; set; }
     }

@@ -8,17 +8,16 @@
         public string? AreaName { get; set; }
         public string? Pincode { get; set; }
 
-        // 1 = Active, 0 = Inactive, 2 = Deleted
+        // 1=Active, 0=Inactive, 2=Archived
         public int? Status { get; set; }
 
-        // Pagination & Search
+        // Pagination
         public int? PageNumber { get; set; }
         public int? PageSize { get; set; }
         public string? Search { get; set; }
 
         // Audit
         public bool? System { get; set; }
-        public string? IPAddress { get; set; }
 
         public int Type { get; set; }
     }
