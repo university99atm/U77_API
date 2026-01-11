@@ -1,9 +1,9 @@
 namespace atmglobalapi.Model.Master
 {
-    public class M35MaritalStatus
+    public class M37BloodGroup
     {
         public int? Id { get; set; }
-        public string? MaritalStatusName { get; set; }
+        public string? BloodGroupName { get; set; }
 
         // 1=Active, 0=Inactive, 2=Archived
         public int? Status { get; set; }

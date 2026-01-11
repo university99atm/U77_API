@@ -1,9 +1,11 @@
 namespace atmglobalapi.Model.Master
 {
-    public class M35MaritalStatus
+    public class M29Relationship
     {
         public int? Id { get; set; }
-        public string? MaritalStatusName { get; set; }
+        public string? RelationshipName { get; set; }
+        public bool? IsForParental { get; set; }
+        public string? RelationType { get; set; }
 
         // 1=Active, 0=Inactive, 2=Archived
         public int? Status { get; set; }

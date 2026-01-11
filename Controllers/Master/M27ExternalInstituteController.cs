@@ -1,9 +1,11 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using atmglobalapi.Model.Master;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
 using System.Data;
+using System.Linq;
 using System.Security.Claims;
-using atmglobalapi.Model.Master;
 
 namespace atmglobalapi.Controllers.Master
 {
@@ -26,58 +28,96 @@ namespace atmglobalapi.Controllers.Master
         {
             try
             {
-                // 🔐 JWT Claims
-                int userId = Convert.ToInt32(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                /* ================= JWT CLAIMS ================= */
+                int userId = Convert.ToInt32(
+                    User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
-                using SqlConnection con = new SqlConnection(
-                    _configuration.GetConnectionString("U77_Common"));
+                string roleId =
+                    User.FindFirst(ClaimTypes.Role)?.Value ?? "0";
 
-                using SqlCommand cmd = new SqlCommand(
-                    "U77_Pro_M27_ExternalInstitute_Operation", con);
+                /* ================= ROLE CHECK ================= */
+                if ((model.Type == 3 || model.Type == 8) && roleId != "1")
+                {
+                    return Unauthorized(new
+                    {
+                        isSuccess = false,
+                        message = "You are not authorized to perform this action"
+                    });
+                }
 
-                cmd.CommandType = CommandType.StoredProcedure;
+                /* ================= CLIENT IP ================= */
+                string ipAddress =
+                    HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault()
+                    ?? HttpContext.Connection.RemoteIpAddress?.MapToIPv4().ToString()
+                    ?? "UNKNOWN";
 
-                cmd.Parameters.AddWithValue("@Type", model.Type);
-                cmd.Parameters.AddWithValue("@Id", model.Id ?? (object)DBNull.Value);
-
-                cmd.Parameters.AddWithValue("@InstituteName", model.InstituteName ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@InstituteCode", model.InstituteCode ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@InstituteType", model.InstituteType ?? (object)DBNull.Value);
-
-                cmd.Parameters.AddWithValue("@SectorId", model.SectorId ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@EducationBoardId", model.EducationBoardId ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@MediumOfInstructionId", model.MediumOfInstructionId ?? (object)DBNull.Value);
-
-                cmd.Parameters.AddWithValue("@CountryId", model.CountryId ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@StateId", model.StateId ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@DistrictId", model.DistrictId ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@CityId", model.CityId ?? (object)DBNull.Value);
-
-                cmd.Parameters.AddWithValue("@AddressLine1", model.AddressLine1 ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@AddressLine2", model.AddressLine2 ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Pincode", model.Pincode ?? (object)DBNull.Value);
-
-                cmd.Parameters.AddWithValue("@Status", model.Status ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Archive", model.Archive ?? (object)DBNull.Value);
-
-                // Audit fields
-                cmd.Parameters.AddWithValue("@CreatedBy",
-                    model.Type == 1 ? userId : (object)DBNull.Value);
-
-                cmd.Parameters.AddWithValue("@UpdatedBy",
-                    model.Type == 2 || model.Type == 4 ? userId : (object)DBNull.Value);
-
-                con.Open();
-
-                using SqlDataAdapter da = new SqlDataAdapter(cmd);
                 DataTable dt = new DataTable();
-                da.Fill(dt);
+
+                using (SqlConnection con =
+                    new SqlConnection(_configuration.GetConnectionString("U77_Master")))
+                using (SqlCommand cmd =
+                    new SqlCommand("dbo.U77_Pro_M27_externalinstituteoperation", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+
+                    cmd.Parameters.AddWithValue("@Type", model.Type);
+                    cmd.Parameters.AddWithValue("@Id", (object?)model.Id ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@InstituteName", (object?)model.InstituteName ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@InstituteType", (object?)model.InstituteType ?? DBNull.Value);
+
+                    // Foreign Keys
+                    cmd.Parameters.AddWithValue("@EducationBoardId", (object?)model.EducationBoardId ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@MediumOfInstructionId", (object?)model.MediumOfInstructionId ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@CountryId", (object?)model.CountryId ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@StateId", (object?)model.StateId ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@DistrictId", (object?)model.DistrictId ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@CityId", (object?)model.CityId ?? DBNull.Value);
+
+                    // Address
+                    cmd.Parameters.AddWithValue("@AddressLine1", (object?)model.AddressLine1 ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@AddressLine2", (object?)model.AddressLine2 ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Pincode", (object?)model.Pincode ?? DBNull.Value);
+
+                    cmd.Parameters.AddWithValue("@Status", (object?)model.Status ?? DBNull.Value);
+
+                    // Pagination
+                    cmd.Parameters.AddWithValue("@PageNumber", model.PageNumber ?? 1);
+                    cmd.Parameters.AddWithValue("@PageSize", model.PageSize ?? 10);
+                    cmd.Parameters.AddWithValue("@Search", (object?)model.Search ?? DBNull.Value);
+
+                    // Audit
+                    cmd.Parameters.AddWithValue("@System", model.System ?? false);
+                    cmd.Parameters.AddWithValue("@IPAddress", ipAddress);
+                    cmd.Parameters.AddWithValue("@operation_by", userId);
+
+                    SqlDataAdapter da = new SqlDataAdapter(cmd);
+                    da.Fill(dt);
+                }
+
+                /* ================= RESPONSE ================= */
+                if (dt.Rows.Count > 0)
+                {
+                    // Convert DataTable to a JSON-serializable structure (List<Dictionary<string, object>>)
+                    var rows = dt.Rows.Cast<DataRow>()
+                        .Select(r => dt.Columns.Cast<DataColumn>()
+                            .ToDictionary(
+                                c => c.ColumnName,
+                                c => r[c] == DBNull.Value ? null : r[c]
+                            )
+                        )
+                        .ToList();
+
+                    return Ok(new
+                    {
+                        isSuccess = true,
+                        data = rows
+                    });
+                }
 
                 return Ok(new
                 {
-                    isSuccess = Convert.ToBoolean(dt.Rows[0]["isSuccess"]),
-                    message = dt.Rows[0]["message"].ToString(),
-                    data = dt.Rows[0]["data"] == DBNull.Value ? null : dt.Rows[0]["data"]
+                    isSuccess = false,
+                    message = "No data returned"
                 });
             }
             catch (Exception ex)
@@ -85,7 +125,8 @@ namespace atmglobalapi.Controllers.Master
                 return StatusCode(500, new
                 {
                     isSuccess = false,
-                    message = ex.Message
+                    message = "Internal server error",
+                    error = ex.Message
                 });
             }
         }

@@ -14,17 +14,17 @@ namespace atmglobalapi.Controllers.Master
     [Route("api/master/[controller]")]
     [ApiController]
     [Authorize]
-    public class M34StudentStatusController : ControllerBase
+    public class M29RelationshipController : ControllerBase
     {
         private readonly IConfiguration _configuration;
 
-        public M34StudentStatusController(IConfiguration configuration)
+        public M29RelationshipController(IConfiguration configuration)
         {
             _configuration = configuration;
         }
 
         [HttpPost("operation")]
-        public IActionResult StudentStatusOperation([FromBody] M34StudentStatus model)
+        public IActionResult RelationshipOperation([FromBody] M29Relationship model)
         {
             try
             {
@@ -56,13 +56,15 @@ namespace atmglobalapi.Controllers.Master
                 using (SqlConnection con =
                     new SqlConnection(_configuration.GetConnectionString("U77_Master")))
                 using (SqlCommand cmd =
-                    new SqlCommand("dbo.U77_Pro_M34_studentstatusoperation", con))
+                    new SqlCommand("dbo.U77_Pro_M29_relationshipoperation", con))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
 
                     cmd.Parameters.AddWithValue("@Type", model.Type);
                     cmd.Parameters.AddWithValue("@Id", (object?)model.Id ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@StudentStatusName", (object?)model.StudentStatusName ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@RelationshipName", (object?)model.RelationshipName ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@IsForParental", (object?)model.IsForParental ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@RelationType", (object?)model.RelationType ?? DBNull.Value);
                     cmd.Parameters.AddWithValue("@Status", (object?)model.Status ?? DBNull.Value);
 
                     // Pagination
