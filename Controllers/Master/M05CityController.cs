@@ -54,7 +54,7 @@ namespace atmglobalapi.Controllers.Master
                 DataTable dt = new DataTable();
 
                 using SqlConnection con =
-                    new SqlConnection(_configuration.GetConnectionString("U77_Common"));
+                    new SqlConnection(_configuration.GetConnectionString("U77_Master"));
                 using SqlCommand cmd =
                     new SqlCommand("dbo.U77_Pro_M05_cityoperation", con);
 

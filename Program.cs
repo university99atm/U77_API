@@ -61,11 +61,13 @@ builder.Services.AddSwaggerGen(options =>
         Title = "Master APIs",
         Version = "v1"
     });
+
     options.SwaggerDoc("Student", new OpenApiInfo
     {
         Title = "Student APIs",
         Version = "v1"
     });
+
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         In = ParameterLocation.Header,
@@ -98,17 +100,17 @@ builder.Services.AddSwaggerGen(options =>
 
         return apiDesc.GroupName == null;
     });
-    //options.DocInclusionPredicate((docName, apiDesc) =>
-    //{
-    //    if (docName == "Student")
-    //        return apiDesc.GroupName == "Student";
-
-    //    return apiDesc.GroupName == null;
-    //});
 });
 
 var app = builder.Build();
 
+// ✅ CRITICAL: Enable detailed error pages FIRST (before any other middleware)
+if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
+{
+    app.UseDeveloperExceptionPage();
+}
+
+// ✅ Swagger (should be early in pipeline)
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
@@ -118,8 +120,15 @@ app.UseSwaggerUI(c =>
 });
 
 app.UseHttpsRedirection();
+
+// ✅ CORS (use only once, early in pipeline)
 app.UseCors("AllowAll");
+
+// ✅ Authentication & Authorization
 app.UseAuthentication();
 app.UseAuthorization();
+
+// ✅ Map Controllers (should be last)
 app.MapControllers();
+
 app.Run();

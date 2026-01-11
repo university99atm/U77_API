@@ -28,21 +28,24 @@ namespace atmglobalapi.Controllers.Master
         {
             try
             {
+                /* ================= JWT CLAIMS ================= */
                 int userId = Convert.ToInt32(
                     User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
                 string roleId =
                     User.FindFirst(ClaimTypes.Role)?.Value ?? "0";
 
+                /* ================= ROLE CHECK ================= */
                 if ((model.Type == 3 || model.Type == 8) && roleId != "1")
                 {
                     return Unauthorized(new
                     {
                         isSuccess = false,
-                        message = "You are not authorized"
+                        message = "You are not authorized to perform this action"
                     });
                 }
 
+                /* ================= CLIENT IP ================= */
                 string ipAddress =
                     HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault()
                     ?? HttpContext.Connection.RemoteIpAddress?.MapToIPv4().ToString()
@@ -50,45 +53,57 @@ namespace atmglobalapi.Controllers.Master
 
                 DataTable dt = new DataTable();
 
-                using SqlConnection con =
-                    new SqlConnection(_configuration.GetConnectionString("U77_Common"));
-                using SqlCommand cmd =
-                    new SqlCommand("dbo.U77_Pro_M11_sectoroperation", con);
+                using (SqlConnection con =
+                    new SqlConnection(_configuration.GetConnectionString("U77_Master")))
+                using (SqlCommand cmd =
+                    new SqlCommand("dbo.U77_Pro_M11_sectoroperation", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
 
-                cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@Type", model.Type);
+                    cmd.Parameters.AddWithValue("@Id", (object?)model.Id ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@SectorName", (object?)model.SectorName ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Status", (object?)model.Status ?? DBNull.Value);
 
-                cmd.Parameters.AddWithValue("@Type", model.Type);
-                cmd.Parameters.AddWithValue("@Id", (object?)model.Id ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@SectorName", (object?)model.SectorName ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@SectorCode", (object?)model.SectorCode ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@Description", (object?)model.Description ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@Status", (object?)model.Status ?? DBNull.Value);
+                    // Pagination
+                    cmd.Parameters.AddWithValue("@PageNumber", model.PageNumber ?? 1);
+                    cmd.Parameters.AddWithValue("@PageSize", model.PageSize ?? 10);
+                    cmd.Parameters.AddWithValue("@Search", (object?)model.Search ?? DBNull.Value);
 
-                cmd.Parameters.AddWithValue("@PageNumber", model.PageNumber ?? 1);
-                cmd.Parameters.AddWithValue("@PageSize", model.PageSize ?? 10);
-                cmd.Parameters.AddWithValue("@Search", (object?)model.Search ?? DBNull.Value);
+                    // Audit
+                    cmd.Parameters.AddWithValue("@System", model.System ?? false);
+                    cmd.Parameters.AddWithValue("@IPAddress", ipAddress);
+                    cmd.Parameters.AddWithValue("@OperationBy", userId);
 
-                cmd.Parameters.AddWithValue("@System", model.System ?? false);
-                cmd.Parameters.AddWithValue("@IPAddress", ipAddress);
-                cmd.Parameters.AddWithValue("@OperationBy", userId);
+                    SqlDataAdapter da = new SqlDataAdapter(cmd);
+                    da.Fill(dt);
+                }
 
-                SqlDataAdapter da = new SqlDataAdapter(cmd);
-                da.Fill(dt);
-
+                /* ================= RESPONSE ================= */
                 if (dt.Rows.Count > 0)
                 {
+                    // Convert DataTable to a JSON-serializable structure (List<Dictionary<string, object>>)
                     var rows = dt.Rows.Cast<DataRow>()
                         .Select(r => dt.Columns.Cast<DataColumn>()
                             .ToDictionary(
                                 c => c.ColumnName,
                                 c => r[c] == DBNull.Value ? null : r[c]
-                            ))
+                            )
+                        )
                         .ToList();
 
-                    return Ok(new { isSuccess = true, data = rows });
+                    return Ok(new
+                    {
+                        isSuccess = true,
+                        data = rows
+                    });
                 }
 
-                return Ok(new { isSuccess = false, message = "No data found" });
+                return Ok(new
+                {
+                    isSuccess = false,
+                    message = "No data returned"
+                });
             }
             catch (Exception ex)
             {

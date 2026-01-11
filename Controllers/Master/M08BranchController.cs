@@ -28,12 +28,14 @@ namespace atmglobalapi.Controllers.Master
         {
             try
             {
+                /* ================= JWT CLAIMS ================= */
                 int userId = Convert.ToInt32(
                     User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
                 string roleId =
                     User.FindFirst(ClaimTypes.Role)?.Value ?? "0";
 
+                /* ================= ROLE CHECK ================= */
                 if ((model.Type == 3 || model.Type == 8) && roleId != "1")
                 {
                     return Unauthorized(new
@@ -51,7 +53,7 @@ namespace atmglobalapi.Controllers.Master
                 DataTable dt = new DataTable();
 
                 using SqlConnection con =
-                    new SqlConnection(_configuration.GetConnectionString("U77_Common"));
+                    new SqlConnection(_configuration.GetConnectionString("U77_Master"));
                 using SqlCommand cmd =
                     new SqlCommand("dbo.U77_Pro_M08_branchoperation", con);
 
@@ -59,7 +61,6 @@ namespace atmglobalapi.Controllers.Master
 
                 cmd.Parameters.AddWithValue("@Type", model.Type);
                 cmd.Parameters.AddWithValue("@Id", (object?)model.Id ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@CollegeId", (object?)model.CollegeId ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@BranchName", (object?)model.BranchName ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@Status", (object?)model.Status ?? DBNull.Value);
 
