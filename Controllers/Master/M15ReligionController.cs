@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using System.Data;
 using System.Linq;
 using System.Security.Claims;
+using System.Collections.Generic;
 
 namespace atmglobalapi.Controllers.Master
 {
@@ -28,24 +29,23 @@ namespace atmglobalapi.Controllers.Master
         {
             try
             {
-                /* ================= JWT CLAIMS ================= */
+                /* ================= JWT ================= */
                 int userId = Convert.ToInt32(
                     User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
                 string roleId =
                     User.FindFirst(ClaimTypes.Role)?.Value ?? "0";
 
-                /* ================= ROLE CHECK ================= */
                 if ((model.Type == 3 || model.Type == 8) && roleId != "1")
                 {
                     return Unauthorized(new
                     {
                         isSuccess = false,
-                        message = "You are not authorized to perform this action"
+                        message = "You are not authorized"
                     });
                 }
 
-                /* ================= CLIENT IP ================= */
+                /* ================= IP ================= */
                 string ipAddress =
                     HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault()
                     ?? HttpContext.Connection.RemoteIpAddress?.MapToIPv4().ToString()
@@ -65,12 +65,10 @@ namespace atmglobalapi.Controllers.Master
                     cmd.Parameters.AddWithValue("@ReligionName", (object?)model.ReligionName ?? DBNull.Value);
                     cmd.Parameters.AddWithValue("@Status", (object?)model.Status ?? DBNull.Value);
 
-                    // Pagination
                     cmd.Parameters.AddWithValue("@PageNumber", model.PageNumber ?? 1);
                     cmd.Parameters.AddWithValue("@PageSize", model.PageSize ?? 10);
                     cmd.Parameters.AddWithValue("@Search", (object?)model.Search ?? DBNull.Value);
 
-                    // Audit
                     cmd.Parameters.AddWithValue("@System", model.System ?? false);
                     cmd.Parameters.AddWithValue("@IPAddress", ipAddress);
                     cmd.Parameters.AddWithValue("@OperationBy", userId);
@@ -79,30 +77,33 @@ namespace atmglobalapi.Controllers.Master
                     da.Fill(dt);
                 }
 
-                /* ================= RESPONSE ================= */
-                if (dt.Rows.Count > 0)
+                /* ================= SAFE RESPONSE ================= */
+                if (dt.Rows.Count == 0)
                 {
-                    // Convert DataTable to a JSON-serializable structure (List<Dictionary<string, object>>)
-                    var rows = dt.Rows.Cast<DataRow>()
-                        .Select(r => dt.Columns.Cast<DataColumn>()
-                            .ToDictionary(
-                                c => c.ColumnName,
-                                c => r[c] == DBNull.Value ? null : r[c]
-                            )
-                        )
-                        .ToList();
-
                     return Ok(new
                     {
                         isSuccess = true,
-                        data = rows
+                        data = new List<object>()
                     });
                 }
 
+                var data = dt.AsEnumerable()
+                    .Select(row =>
+                    {
+                        var dict = new Dictionary<string, object?>();
+                        foreach (DataColumn col in dt.Columns)
+                        {
+                            dict[col.ColumnName] =
+                                row[col] == DBNull.Value ? null : row[col];
+                        }
+                        return dict;
+                    })
+                    .ToList();
+
                 return Ok(new
                 {
-                    isSuccess = false,
-                    message = "No data returned"
+                    isSuccess = true,
+                    data
                 });
             }
             catch (Exception ex)
