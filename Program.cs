@@ -53,19 +53,29 @@ builder.Services.AddSwaggerGen(options =>
     options.SwaggerDoc("Default", new OpenApiInfo
     {
         Title = "ATM Global API",
-        Version = "v1"
+        Version = "v1",
+        Description = "Main API endpoints"
     });
 
     options.SwaggerDoc("Master", new OpenApiInfo
     {
-        Title = "Master APIs",
-        Version = "v1"
+        Title = "Master Data Management",
+        Version = "v1",
+        Description = "Master data CRUD operations (37 controllers)"
     });
 
     options.SwaggerDoc("Student", new OpenApiInfo
     {
-        Title = "Student APIs",
-        Version = "v1"
+        Title = "Student Management",
+        Version = "v1",
+        Description = "Student-related operations"
+    });
+
+    options.SwaggerDoc("User", new OpenApiInfo
+    {
+        Title = "User Management",
+        Version = "v1",
+        Description = "User authentication, roles, and menu management"
     });
 
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -97,6 +107,8 @@ builder.Services.AddSwaggerGen(options =>
             return apiDesc.GroupName == "Master";
         if (docName == "Student")
             return apiDesc.GroupName == "Student";
+        if (docName == "User")
+            return apiDesc.GroupName == "User";
 
         return apiDesc.GroupName == null;
     });
@@ -115,8 +127,9 @@ app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/Default/swagger.json", "ATM Global API");
-    c.SwaggerEndpoint("/swagger/Master/swagger.json", "Master APIs");
-    c.SwaggerEndpoint("/swagger/Student/swagger.json", "Student APIs");
+    c.SwaggerEndpoint("/swagger/Master/swagger.json", "Master Data Management");
+    c.SwaggerEndpoint("/swagger/Student/swagger.json", "Student Management");
+    c.SwaggerEndpoint("/swagger/User/swagger.json", "User Management");
 });
 
 app.UseHttpsRedirection();
