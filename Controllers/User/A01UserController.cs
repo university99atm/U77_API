@@ -1,6 +1,6 @@
 ﻿using atmglobalapi.Model.User;
-using atmglobalapi.Services;
-using CommonClass;  // ✅ Added for encryption
+using atmglobalapi.Services;  // ✅ This line should already be there
+using CommonClass;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Security.Claims;
+using System;
 
 namespace atmglobalapi.Controllers.User
 {
@@ -28,9 +29,10 @@ namespace atmglobalapi.Controllers.User
         }
 
         /* ===================================
-           REGISTER USER 
+           REGISTER USER
         =================================== */
         [HttpPost("register")]
+        [Authorize]
         public IActionResult Register([FromBody] A01User model)
         {
             try
