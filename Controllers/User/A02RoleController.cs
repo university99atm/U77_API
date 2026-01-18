@@ -117,5 +117,76 @@ namespace atmglobalapi.Controllers.User
                 });
             }
         }
+
+        /* ===================================
+           GET ROLE DETAIL(S)
+        =================================== */
+        [HttpGet("detail")]
+        public IActionResult GetRoleDetail([FromQuery] int roleId = -1)
+        {
+            try
+            {
+                DataTable dt = new DataTable();
+
+                using (SqlConnection con =
+                    new SqlConnection(_configuration.GetConnectionString("U77_User")))
+                using (SqlCommand cmd =
+                    new SqlCommand("dbo.U77_Pro_A02_GetRoleDetail", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@RoleId", roleId);
+
+                    SqlDataAdapter da = new SqlDataAdapter(cmd);
+                    da.Fill(dt);
+                }
+
+                /* ================= SAFE RESPONSE ================= */
+                if (dt.Rows.Count == 0)
+                {
+                    return Ok(new
+                    {
+                        isSuccess = true,
+                        data = new List<object>()
+                    });
+                }
+
+                var data = dt.AsEnumerable()
+                    .Select(row =>
+                    {
+                        var dict = new Dictionary<string, object?>();
+                        foreach (DataColumn col in dt.Columns)
+                        {
+                            dict[col.ColumnName] =
+                                row[col] == DBNull.Value ? null : row[col];
+                        }
+                        return dict;
+                    })
+                    .ToList();
+
+                return Ok(new
+                {
+                    isSuccess = true,
+                    data
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    isSuccess = false,
+                    message = "Internal server error",
+                    error = ex.Message
+                });
+            }
+        }
+
+        /* ===================================
+           GET ROLE DETAIL BY ID (Alternative Route)
+        =================================== */
+        [HttpGet("detail/{roleId}")]
+        public IActionResult GetRoleDetailById(int roleId)
+        {
+            return GetRoleDetail(roleId);
+        }
     }
 }

@@ -1,6 +1,6 @@
 ﻿using atmglobalapi.Model.User;
-using atmglobalapi.Services;  // ✅ This line should already be there
-using CommonClass;
+using atmglobalapi.Services;
+using CommonClass;  // ✅ Added for encryption
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Security.Claims;
-using System;
+using System.Text.Json;
 
 namespace atmglobalapi.Controllers.User
 {
@@ -221,10 +221,14 @@ namespace atmglobalapi.Controllers.User
 
                 /* ================= GENERATE JWT TOKEN ================= */
                 var primaryRole = roles.Count > 0
-                    ? ((dynamic)roles[0]).RoleId.ToString()
+                    ? ((dynamic)roles[0]).RoleId?.ToString() ?? "0"
                     : "0";
 
-                var token = _jwtService.GenerateToken(userId, email ?? "", primaryRole);
+                var token = _jwtService.GenerateToken(
+                    userId ?? "0",
+                    email ?? "",
+                    primaryRole ?? "0"
+                );
 
                 return Ok(new
                 {
@@ -349,5 +353,189 @@ namespace atmglobalapi.Controllers.User
                 });
             }
         }
+
+        /* ===================================
+           GET USER DETAIL(S)
+        =================================== */
+        [HttpGet("detail")]
+        [Authorize]
+        public IActionResult GetUserDetail([FromQuery] int userId = -1)
+        {
+            try
+            {
+                DataTable dt = new DataTable();
+
+                using (SqlConnection con =
+                    new SqlConnection(_configuration.GetConnectionString("U77_User")))
+                using (SqlCommand cmd =
+                    new SqlCommand("dbo.U77_Pro_A01_GetUserDetail", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@UserId", userId);
+
+                    SqlDataAdapter da = new SqlDataAdapter(cmd);
+                    da.Fill(dt);
+                }
+
+                /* ================= SAFE RESPONSE ================= */
+                if (dt.Rows.Count == 0)
+                {
+                    return Ok(new
+                    {
+                        isSuccess = true,
+                        data = new List<object>()
+                    });
+                }
+
+                var data = dt.AsEnumerable()
+                    .Select(row =>
+                    {
+                        var dict = new Dictionary<string, object?>();
+                        foreach (DataColumn col in dt.Columns)
+                        {
+                            dict[col.ColumnName] =
+                                row[col] == DBNull.Value ? null : row[col];
+                        }
+                        return dict;
+                    })
+                    .ToList();
+
+                return Ok(new
+                {
+                    isSuccess = true,
+                    data
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    isSuccess = false,
+                    message = "Internal server error",
+                    error = ex.Message
+                });
+            }
+        }
+
+        /* ===================================
+           GET USER DETAIL BY ID (Alternative Route)
+        =================================== */
+        [HttpGet("detail/{userId}")]
+        [Authorize]
+        public IActionResult GetUserDetailById(int userId)
+        {
+            return GetUserDetail(userId);
+        }
+
+        /* ===================================
+           ASSIGN USER ROLES
+        =================================== */
+        [HttpPost("assign-roles")]
+        [Authorize]
+        public IActionResult AssignUserRoles([FromBody] A05UserRoleAssignment model)
+        {
+            try
+            {
+                /* ================= VALIDATION ================= */
+                if (model.UserId == null || model.UserId <= 0)
+                    return BadRequest(new { isSuccess = false, message = "Valid UserId is required" });
+
+                if (model.RoleIds == null || model.RoleIds.Count == 0)
+                    return BadRequest(new { isSuccess = false, message = "At least one role must be assigned" });
+
+                /* ================= JWT ================= */
+                int assignedBy = Convert.ToInt32(
+                    User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+                string roleId =
+                    User.FindFirst(ClaimTypes.Role)?.Value ?? "0";
+
+                // Only admin can assign roles
+                if (roleId != "1")
+                {
+                    return Unauthorized(new
+                    {
+                        isSuccess = false,
+                        message = "You are not authorized to assign roles"
+                    });
+                }
+
+                /* ================= IP ================= */
+                string ipAddress =
+                    HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault()
+                    ?? HttpContext.Connection.RemoteIpAddress?.MapToIPv4().ToString()
+                    ?? "UNKNOWN";
+
+                /* ================= CONVERT ROLE IDS TO JSON ================= */
+                string roleIdsJson = JsonSerializer.Serialize(model.RoleIds);
+
+                DataTable dt = new DataTable();
+
+                using (SqlConnection con =
+                    new SqlConnection(_configuration.GetConnectionString("U77_User")))
+                using (SqlCommand cmd =
+                    new SqlCommand("dbo.U77_Pro_A05_AssignUserRoles", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+
+                    cmd.Parameters.AddWithValue("@UserId", model.UserId);
+                    cmd.Parameters.AddWithValue("@RoleIds", roleIdsJson);
+                    cmd.Parameters.AddWithValue("@AssignedBy", assignedBy);
+                    cmd.Parameters.AddWithValue("@IsSystem", model.IsSystem ?? false);
+                    cmd.Parameters.AddWithValue("@IPAddress", ipAddress);
+
+                    SqlDataAdapter da = new SqlDataAdapter(cmd);
+                    da.Fill(dt);
+                }
+
+                /* ================= SAFE RESPONSE ================= */
+                if (dt.Rows.Count == 0)
+                {
+                    return Ok(new
+                    {
+                        isSuccess = true,
+                        data = new List<object>()
+                    });
+                }
+
+                var data = dt.AsEnumerable()
+                    .Select(row =>
+                    {
+                        var dict = new Dictionary<string, object?>();
+                        foreach (DataColumn col in dt.Columns)
+                        {
+                            dict[col.ColumnName] =
+                                row[col] == DBNull.Value ? null : row[col];
+                        }
+                        return dict;
+                    })
+                    .ToList();
+
+                return Ok(new
+                {
+                    isSuccess = true,
+                    data
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    isSuccess = false,
+                    message = "Internal server error",
+                    error = ex.Message
+                });
+            }
+        }
+    }
+
+    /* ===================================
+       MODEL FOR ROLE ASSIGNMENT
+    =================================== */
+    public class A05UserRoleAssignment
+    {
+        public int? UserId { get; set; }
+        public List<int> RoleIds { get; set; } = new List<int>();
+        public bool? IsSystem { get; set; }
     }
 }

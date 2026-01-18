@@ -10,6 +10,9 @@ var config = builder.Configuration;
 // ✅ JWT Service
 builder.Services.AddScoped<IJwtService, JwtService>();
 
+// ✅ Email Service
+builder.Services.AddScoped<IEmailService, EmailService>();
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 

@@ -1,31 +1,31 @@
-using atmglobalapi.Model.User;
+using atmglobalapi.Model.Student;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
+using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Security.Claims;
-using System.Collections.Generic;
 
-namespace atmglobalapi.Controllers.User
+namespace atmglobalapi.Controllers.Student
 {
-    [ApiExplorerSettings(GroupName = "User")]
-    [Tags("User")]
-    [Route("api/user/[controller]")]
+    [ApiExplorerSettings(GroupName = "Student")]
+    [Tags("Student")]
+    [Route("api/student/[controller]")]
     [ApiController]
-    [Authorize]  // ? ADDED: Requires authentication for all endpoints
-    public class A03MenuController : ControllerBase
+    [Authorize]
+    public class S04StudentAddressController : ControllerBase
     {
         private readonly IConfiguration _configuration;
 
-        public A03MenuController(IConfiguration configuration)
+        public S04StudentAddressController(IConfiguration configuration)
         {
             _configuration = configuration;
         }
 
         [HttpPost("operation")]
-        public IActionResult MenuOperation([FromBody] A03Menu model)
+        public IActionResult StudentAddressOperation([FromBody] S04StudentAddress model)
         {
             try
             {
@@ -36,6 +36,7 @@ namespace atmglobalapi.Controllers.User
                 string roleId =
                     User.FindFirst(ClaimTypes.Role)?.Value ?? "0";
 
+                /* ================= ROLE CHECK ================= */
                 if ((model.Type == 3 || model.Type == 8) && roleId != "1")
                 {
                     return Unauthorized(new
@@ -54,27 +55,29 @@ namespace atmglobalapi.Controllers.User
                 DataTable dt = new DataTable();
 
                 using (SqlConnection con =
-                    new SqlConnection(_configuration.GetConnectionString("U77_User")))
+                    new SqlConnection(_configuration.GetConnectionString("U77_Student")))
                 using (SqlCommand cmd =
-                    new SqlCommand("dbo.U77_Pro_A03_MenuOperation", con))
+                    new SqlCommand("dbo.U77_Pro_S04_Student_AddressOperation", con))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
 
                     cmd.Parameters.AddWithValue("@Type", model.Type);
-                    cmd.Parameters.AddWithValue("@MenuId", (object?)model.MenuId ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@MenuName", (object?)model.MenuName ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@MenuCode", (object?)model.MenuCode ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@ParentMenuId", (object?)model.ParentMenuId ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@DisplayOrder", (object?)model.DisplayOrder ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@MenuUrl", (object?)model.MenuUrl ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@MenuIcon", (object?)model.MenuIcon ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@IsVisible", model.IsVisible ?? true);
+                    cmd.Parameters.AddWithValue("@Id", (object?)model.Id ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@StudentId", (object?)model.StudentId ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@AddressTypeId", (object?)model.AddressTypeId ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@AddressLine1", (object?)model.AddressLine1 ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@AddressLine2", (object?)model.AddressLine2 ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@AreaId", (object?)model.AreaId ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@CityId", (object?)model.CityId ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@DistrictId", (object?)model.DistrictId ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@StateId", (object?)model.StateId ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@CountryId", (object?)model.CountryId ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Pincode", (object?)model.Pincode ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@IsCurrent", (object?)model.IsCurrent ?? DBNull.Value);
                     cmd.Parameters.AddWithValue("@Status", (object?)model.Status ?? DBNull.Value);
-
                     cmd.Parameters.AddWithValue("@PageNumber", model.PageNumber ?? 1);
                     cmd.Parameters.AddWithValue("@PageSize", model.PageSize ?? 10);
                     cmd.Parameters.AddWithValue("@Search", (object?)model.Search ?? DBNull.Value);
-
                     cmd.Parameters.AddWithValue("@System", model.System ?? false);
                     cmd.Parameters.AddWithValue("@IPAddress", ipAddress);
                     cmd.Parameters.AddWithValue("@OperationBy", userId);
