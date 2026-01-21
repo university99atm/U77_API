@@ -81,6 +81,14 @@ builder.Services.AddSwaggerGen(options =>
         Description = "User authentication, roles, and menu management"
     });
 
+    // ✅ NEW: Lead Management Swagger Group
+    options.SwaggerDoc("Lead", new OpenApiInfo
+    {
+        Title = "Lead Management",
+        Version = "v1",
+        Description = "Lead capture, tracking, and conversion management"
+    });
+
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         In = ParameterLocation.Header,
@@ -112,6 +120,8 @@ builder.Services.AddSwaggerGen(options =>
             return apiDesc.GroupName == "Student";
         if (docName == "User")
             return apiDesc.GroupName == "User";
+        if (docName == "Lead")
+            return apiDesc.GroupName == "Lead";
 
         return apiDesc.GroupName == null;
     });
@@ -119,13 +129,13 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-// ✅ CRITICAL: Enable detailed error pages FIRST (before any other middleware)
+// ✅ Enable detailed error pages
 if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
 {
     app.UseDeveloperExceptionPage();
 }
 
-// ✅ Swagger (should be early in pipeline)
+// ✅ Swagger
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
@@ -133,18 +143,13 @@ app.UseSwaggerUI(c =>
     c.SwaggerEndpoint("/swagger/Master/swagger.json", "Master Data Management");
     c.SwaggerEndpoint("/swagger/Student/swagger.json", "Student Management");
     c.SwaggerEndpoint("/swagger/User/swagger.json", "User Management");
+    c.SwaggerEndpoint("/swagger/Lead/swagger.json", "Lead Management"); // ✅ NEW
 });
 
 app.UseHttpsRedirection();
-
-// ✅ CORS (use only once, early in pipeline)
 app.UseCors("AllowAll");
-
-// ✅ Authentication & Authorization
 app.UseAuthentication();
 app.UseAuthorization();
-
-// ✅ Map Controllers (should be last)
 app.MapControllers();
 
 app.Run();

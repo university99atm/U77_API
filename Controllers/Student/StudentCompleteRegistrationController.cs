@@ -360,7 +360,7 @@ namespace atmglobalapi.Controllers.Student
                 if (studentId <= 0)
                     return BadRequest(new { isSuccess = false, message = "Valid StudentId is required" });
 
-                DataTable dt = new DataTable();
+                string jsonResult = string.Empty;
 
                 using (SqlConnection con =
                     new SqlConnection(_configuration.GetConnectionString("U77_Student")))
@@ -372,36 +372,29 @@ namespace atmglobalapi.Controllers.Student
 
                     cmd.Parameters.AddWithValue("@StudentId", studentId);
 
-                    SqlDataAdapter da = new SqlDataAdapter(cmd);
-                    da.Fill(dt);
+                    con.Open();
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read() && !reader.IsDBNull(0))
+                        {
+                            // Use GetString with full text retrieval
+                            jsonResult = reader.GetString(0);
+                        }
+                    }
                 }
 
-                /* ================= PARSE JSON RESPONSE ================= */
-                if (dt.Rows.Count == 0)
+                /* ================= RETURN RAW JSON ================= */
+                if (string.IsNullOrEmpty(jsonResult))
                 {
-                    return Ok(new
+                    return NotFound(new
                     {
                         isSuccess = false,
                         message = "Student not found"
                     });
                 }
 
-                // The stored procedure returns JSON, so we need to extract it
-                var jsonResult = dt.Rows[0][0]?.ToString();
-
-                if (string.IsNullOrEmpty(jsonResult))
-                {
-                    return Ok(new
-                    {
-                        isSuccess = false,
-                        message = "No data returned from database"
-                    });
-                }
-
-                // Parse the JSON and return it as an object
-                var profileData = JsonSerializer.Deserialize<object>(jsonResult);
-
-                return Ok(profileData);
+                // Return raw JSON content directly (avoid double serialization)
+                return Content(jsonResult, "application/json");
             }
             catch (Exception ex)
             {
